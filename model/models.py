@@ -49,25 +49,39 @@ def train_ACER(env_train, model_name, timesteps=25000):
     return model
 
 
-def train_DDPG(env_train, model_name, timesteps=10000):
-    """DDPG model"""
+# def train_DDPG(env_train, model_name, timesteps=10000):
+#     """DDPG model"""
 
-    # add the noise objects for DDPG
+#     # add the noise objects for DDPG
+#     n_actions = env_train.action_space.shape[-1]
+#     param_noise = None
+#     action_noise = OrnsteinUhlenbeckActionNoise(
+#         mean=np.zeros(n_actions), sigma=float(0.5) * np.ones(n_actions))
+
+#     start = time.time()
+#     model = DDPG('MlpPolicy', env_train, param_noise=param_noise,
+#                  action_noise=action_noise)
+#     model.learn(total_timesteps=timesteps)
+#     end = time.time()
+
+#     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+#     print('Training time (DDPG): ', (end-start)/60, ' minutes')
+#     return model
+
+def train_TD3(env_train, model_name, timesteps=30000):
+    """TD3 model"""
+    # add the noise objects for TD3
     n_actions = env_train.action_space.shape[-1]
-    param_noise = None
-    action_noise = OrnsteinUhlenbeckActionNoise(
-        mean=np.zeros(n_actions), sigma=float(0.5) * np.ones(n_actions))
+    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
 
     start = time.time()
-    model = DDPG('MlpPolicy', env_train, param_noise=param_noise,
-                 action_noise=action_noise)
+    model = TD3('MlpPolicy', env_train, action_noise=action_noise)
     model.learn(total_timesteps=timesteps)
     end = time.time()
 
     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
-    print('Training time (DDPG): ', (end-start)/60, ' minutes')
+    print('Training time (TD3): ', (end-start)/60, ' minutes')
     return model
-
 
 def train_PPO(env_train, model_name, timesteps=50000):
     """PPO model"""
@@ -261,30 +275,30 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         sharpe_ppo = get_validation_sharpe(i)
         print("PPO Sharpe Ratio: ", sharpe_ppo)
 
-        print("======DDPG Training========")
-        model_ddpg = train_DDPG(
-            env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=10000)
-        #model_ddpg = train_TD3(env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=20000)
-        print("======DDPG Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
+        print("======TD3 Training========")
+        # model_ddpg = train_DDPG(
+        #     env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=10000)
+        model_td3 = train_TD3(env_train, model_name="TD3_10k_dow_{}".format(i), timesteps=30000)
+        print("======TD3 Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
               unique_trade_date[i - rebalance_window])
-        DRL_validation(model=model_ddpg, test_data=validation,
+        DRL_validation(model=model_td3, test_data=validation,
                        test_env=env_val, test_obs=obs_val)
-        sharpe_ddpg = get_validation_sharpe(i)
-
+        sharpe_td3 = get_validation_sharpe(i)
+        print("TD3 Sharpe Ratio: ", sharpe_td3)
         ppo_sharpe_list.append(sharpe_ppo)
         a2c_sharpe_list.append(sharpe_a2c)
-        ddpg_sharpe_list.append(sharpe_ddpg)
+        ddpg_sharpe_list.append(sharpe_td3)
 
         # Model Selection based on sharpe ratio
-        if (sharpe_ppo >= sharpe_a2c) & (sharpe_ppo >= sharpe_ddpg):
+        if (sharpe_ppo >= sharpe_a2c) & (sharpe_ppo >= sharpe_td3):
             model_ensemble = model_ppo
             model_use.append('PPO')
-        elif (sharpe_a2c > sharpe_ppo) & (sharpe_a2c > sharpe_ddpg):
+        elif (sharpe_a2c > sharpe_ppo) & (sharpe_a2c > sharpe_td3):
             model_ensemble = model_a2c
             model_use.append('A2C')
         else:
-            model_ensemble = model_ddpg
-            model_use.append('DDPG')
+            model_ensemble = model_td3
+            model_use.append('TD3')
         ############## Training and Validation ends ##############
 
         ############## Trading starts ##############
