@@ -14,7 +14,7 @@ from env.EnvMultipleStock_train import StockEnvTrain
 from env.EnvMultipleStock_validation import StockEnvValidation
 from env.EnvMultipleStock_trade import StockEnvTrade
 
-from stable_baselines import A2C, PPO2
+from stable_baselines import A2C, PPO2, TD3
 
 from .mlp_models import train_A2C, train_DDPG, train_PPO, train_TD3
 from .lstm_models import train_lstm_A2C, train_lstm_PPO
@@ -79,6 +79,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
     print("============Load Initial Model=================")
     model_a2c = A2C.load(load_path="trained_models/A2C_300k_dow_mlp")
     model_ppo = PPO2.load(load_path="trained_models/PPO_500k_dow_mlp")
+    model_td3 = TD3.load(load_path="trained_models/TD3_300k_dow_mlp")
 
     print("============Start Ensemble Strategy============")
     # for ensemble model, it's necessary to feed the last state
@@ -159,12 +160,12 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         ############## Environment Setup ends ##############
 
         ############## Training and Validation starts ##############
-        print("======Model training from: ", train_start_date, "to ",
-              unique_trade_date[i - rebalance_window - validation_window])
+        print("======Model training from: ",
+              train_start_date, "to ", train_end_date)
         # print("training: ",len(data_split(df, start=20090000, end=test.datadate.unique()[i-rebalance_window]) ))
         # print("==============Model Training===========")
         print("======A2C Training========")
-        model_a2c = train_lstm_A2C(
+        model_a2c = train_A2C(
             env_train, model_name="A2C_10k_dow_{}".format(i), model=model_a2c, timesteps=10000)
         print("======A2C Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
               unique_trade_date[i - rebalance_window])
@@ -174,7 +175,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         print("A2C Sharpe Ratio: ", sharpe_a2c)
 
         print("======PPO Training========")
-        model_ppo = train_lstm_PPO(
+        model_ppo = train_PPO(
             env_train, model_name="PPO_50k_dow_{}".format(i), model=model_ppo, timesteps=50000)
         print("======PPO Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
               unique_trade_date[i - rebalance_window])
@@ -187,7 +188,7 @@ def run_ensemble_strategy(df, unique_trade_date, rebalance_window, validation_wi
         # model_ddpg = train_DDPG(
         #     env_train, model_name="DDPG_10k_dow_{}".format(i), timesteps=10000)
         model_td3 = train_TD3(
-            env_train, model_name="TD3_10k_dow_{}".format(i), timesteps=30000)
+            env_train, model_name="TD3_10k_dow_{}".format(i), model=model_td3, timesteps=30000)
         print("======TD3 Validation from: ", unique_trade_date[i - rebalance_window - validation_window], "to ",
               unique_trade_date[i - rebalance_window])
         DRL_validation(model=model_td3, test_data=validation,

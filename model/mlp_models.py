@@ -15,14 +15,19 @@ from stable_baselines import TD3
 from stable_baselines.ddpg.policies import DDPGPolicy
 from stable_baselines.common.policies import MlpPolicy
 from config import config
+from stable_baselines.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise, AdaptiveParamNoiseSpec
 
 
-def train_A2C(env_train, model_name, timesteps=25000, save_path=None):
+def train_A2C(env_train, model_name, model=None, timesteps=25000, save_path=None):
     """A2C model"""
 
     start = time.time()
-    model = A2C('MlpPolicy', env_train,
-                tensorboard_log=config.TENSORBOARD_DIR)
+    if model is None:
+        model = A2C('MlpPolicy', env_train,
+                    tensorboard_log=config.TENSORBOARD_DIR)
+    else:
+        model.set_env(env_train)
+        model.verbose = config.VERBOSE
     model.learn(total_timesteps=timesteps, tb_log_name=model_name)
     end = time.time()
 
@@ -63,7 +68,7 @@ def train_DDPG(env_train, model_name, timesteps=10000):
     return model
 
 
-def train_TD3(env_train, model_name, timesteps=30000):
+def train_TD3(env_train, model_name, model=None, timesteps=30000, save_path=None):
     """TD3 model"""
     # add the noise objects for TD3
     n_actions = env_train.action_space.shape[-1]
@@ -71,22 +76,34 @@ def train_TD3(env_train, model_name, timesteps=30000):
         n_actions), sigma=0.1 * np.ones(n_actions))
 
     start = time.time()
-    model = TD3('MlpPolicy', env_train, action_noise=action_noise)
+
+    if model is None:
+        model = TD3('MlpPolicy', env_train, action_noise=action_noise)
+    else:
+        model.set_env(env_train)
+        model.verbose = config.VERBOSE
+
     model.learn(total_timesteps=timesteps)
     end = time.time()
 
-    model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    if save_path is None:
+        save_path = f"{config.TRAINED_MODEL_DIR}/{model_name}"
+    model.save(save_path)
     print('Training time (TD3): ', (end-start)/60, ' minutes')
     return model
 
 
-def train_PPO(env_train, model_name, timesteps=50000, save_path=None):
+def train_PPO(env_train, model_name, model=None, timesteps=50000, save_path=None):
     """PPO model"""
 
     start = time.time()
-    model = PPO2('MlpPolicy', env_train, ent_coef=0.005, nminibatches=8,
-                 tensorboard_log=config.TENSORBOARD_DIR)
-    # model = PPO2('MlpPolicy', env_train, ent_coef = 0.005)
+
+    if model is None:
+        model = PPO2('MlpPolicy', env_train, ent_coef=0.005, nminibatches=8,
+                     tensorboard_log=config.TENSORBOARD_DIR)
+    else:
+        model.set_env(env_train)
+        model.verbose = config.VERBOSE
 
     model.learn(total_timesteps=timesteps, tb_log_name=model_name)
     end = time.time()
