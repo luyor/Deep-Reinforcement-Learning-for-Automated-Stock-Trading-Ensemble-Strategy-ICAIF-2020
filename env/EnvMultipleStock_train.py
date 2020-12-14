@@ -18,6 +18,9 @@ STOCK_DIM = 30
 # transaction fee: 1/1000 reasonable percentage
 TRANSACTION_FEE_PERCENT = 0.001
 REWARD_SCALING = 1e-4
+MAGNITUDE_OF_R = 0.002
+# higher sharpe,but lower return
+# MAGNITUDE_OF_R = 0.0015
 
 
 class StockEnvTrain(gym.Env):
@@ -25,7 +28,7 @@ class StockEnvTrain(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, df, day=0):
-        #super(StockEnv, self).__init__()
+        # super(StockEnv, self).__init__()
         # money = 10 , scope = 1
         self.day = day
         self.df = df
@@ -49,6 +52,8 @@ class StockEnvTrain(gym.Env):
         # initialize reward
         self.reward = 0
         self.cost = 0
+        self.A = 0
+        self.B = 0
         # memorize all the total balance change
         self.asset_memory = [INITIAL_ACCOUNT_BALANCE]
         self.rewards_memory = []
@@ -103,14 +108,14 @@ class StockEnvTrain(gym.Env):
             # print("end_total_asset:{}".format(end_total_asset))
             df_total_value = pd.DataFrame(self.asset_memory)
             df_total_value.to_csv('results/account_value_train.csv')
-            #print("total_reward:{}".format(self.state[0]+sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):61]))- INITIAL_ACCOUNT_BALANCE ))
-            #print("total_cost: ", self.cost)
-            #print("total_trades: ", self.trades)
+            # print("total_reward:{}".format(self.state[0]+sum(np.array(self.state[1:(STOCK_DIM+1)])*np.array(self.state[(STOCK_DIM+1):61]))- INITIAL_ACCOUNT_BALANCE ))
+            # print("total_cost: ", self.cost)
+            # print("total_trades: ", self.trades)
             df_total_value.columns = ['account_value']
             df_total_value['daily_return'] = df_total_value.pct_change(1)
             sharpe = (252**0.5)*df_total_value['daily_return'].mean() / \
                 df_total_value['daily_return'].std()
-            #print("Sharpe: ",sharpe)
+            # print("Sharpe: ",sharpe)
             # print("=================================")
             df_rewards = pd.DataFrame(self.rewards_memory)
             # df_rewards.to_csv('results/account_rewards_train.csv')
@@ -125,12 +130,14 @@ class StockEnvTrain(gym.Env):
             # print(np.array(self.state[1:29]))
 
             actions = actions * HMAX_NORMALIZE
-            #actions = (actions.astype(int))
+            # actions = (actions.astype(int))
 
             begin_total_asset = self.state[0] + \
                 sum(np.array(self.state[1:(STOCK_DIM+1)]) *
                     np.array(self.state[(STOCK_DIM+1):(STOCK_DIM*2+1)]))
             # print("begin_total_asset:{}".format(begin_total_asset))
+            pre_A = self.A
+            pre_B = self.B
 
             argsort_actions = np.argsort(actions)
 
@@ -164,7 +171,12 @@ class StockEnvTrain(gym.Env):
             self.asset_memory.append(end_total_asset)
             # print("end_total_asset:{}".format(end_total_asset))
 
-            self.reward = end_total_asset - begin_total_asset
+            r_t = end_total_asset - begin_total_asset
+            self.A = pre_A + MAGNITUDE_OF_R*(r_t-pre_A)
+            self.B = pre_B + MAGNITUDE_OF_R*(r_t**2-pre_B)
+            diff_sr_denominator = (pre_B - pre_A**2)**1.5
+            self.reward = (pre_B*(r_t-pre_A)-0.5*pre_A*(r_t**2 - pre_B)) / \
+                diff_sr_denominator if diff_sr_denominator else 0
             # print("step_reward:{}".format(self.reward))
             self.rewards_memory.append(self.reward)
 
@@ -180,6 +192,8 @@ class StockEnvTrain(gym.Env):
         self.trades = 0
         self.terminal = False
         self.rewards_memory = []
+        self.A = 0
+        self.B = 0
         # initiate state
         self.state = [INITIAL_ACCOUNT_BALANCE] + \
             self.data.adjcp.values.tolist() + \
