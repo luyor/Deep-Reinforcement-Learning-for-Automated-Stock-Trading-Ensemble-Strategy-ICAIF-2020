@@ -29,8 +29,9 @@ def train_A2C(env_train, model_name, timesteps=25000):
     """A2C model"""
 
     start = time.time()
-    model = A2C('MlpPolicy', env_train, verbose=0)
-    model.learn(total_timesteps=timesteps)
+    model = A2C('MlpPolicy', env_train, verbose=0,
+                tensorboard_log="./tensorboard/")
+    model.learn(total_timesteps=timesteps, tb_log_name="A2C")
     end = time.time()
 
     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
@@ -60,8 +61,8 @@ def train_DDPG(env_train, model_name, timesteps=10000):
 
     start = time.time()
     model = DDPG('MlpPolicy', env_train, param_noise=param_noise,
-                 action_noise=action_noise)
-    model.learn(total_timesteps=timesteps)
+                 action_noise=action_noise, tensorboard_log="./tensorboard/")
+    model.learn(total_timesteps=timesteps, tb_log_name="DDPG")
     end = time.time()
 
     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
@@ -73,10 +74,11 @@ def train_PPO(env_train, model_name, timesteps=50000):
     """PPO model"""
 
     start = time.time()
-    model = PPO2('MlpPolicy', env_train, ent_coef=0.005, nminibatches=8)
+    model = PPO2('MlpPolicy', env_train, ent_coef=0.005,
+                 nminibatches=8, tensorboard_log="./tensorboard/")
     #model = PPO2('MlpPolicy', env_train, ent_coef = 0.005)
 
-    model.learn(total_timesteps=timesteps)
+    model.learn(total_timesteps=timesteps, tb_log_name="PPO")
     end = time.time()
 
     model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
