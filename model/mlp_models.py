@@ -63,6 +63,23 @@ def train_DDPG(env_train, model_name, timesteps=10000):
     return model
 
 
+def train_TD3(env_train, model_name, timesteps=30000):
+    """TD3 model"""
+    # add the noise objects for TD3
+    n_actions = env_train.action_space.shape[-1]
+    action_noise = NormalActionNoise(mean=np.zeros(
+        n_actions), sigma=0.1 * np.ones(n_actions))
+
+    start = time.time()
+    model = TD3('MlpPolicy', env_train, action_noise=action_noise)
+    model.learn(total_timesteps=timesteps)
+    end = time.time()
+
+    model.save(f"{config.TRAINED_MODEL_DIR}/{model_name}")
+    print('Training time (TD3): ', (end-start)/60, ' minutes')
+    return model
+
+
 def train_PPO(env_train, model_name, timesteps=50000, save_path=None):
     """PPO model"""
 
