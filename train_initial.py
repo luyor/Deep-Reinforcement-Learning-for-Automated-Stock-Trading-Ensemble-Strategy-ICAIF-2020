@@ -1,4 +1,4 @@
-from model.mlp_models import train_A2C, train_PPO
+from model.mlp_models import train_A2C, train_PPO, train_TD3
 from model.lstm_models import train_lstm_A2C, train_lstm_PPO
 from stable_baselines.common.vec_env import DummyVecEnv
 from env.EnvMultipleStock_train import StockEnvTrain
@@ -65,8 +65,10 @@ def initial_train_test(data):
     # model_name = "A2C_300k_dow_mlp"
 
     # model_name = "PPO_300k_dow_lstm64"
-    model_name = "PPO_300k_dow_lstm128"
+    # model_name = "PPO_300k_dow_lstm128"
     # model_name = "PPO_500k_dow_mlp"
+
+    model_name = "TD3_300k_dow_mlp"
 
     save_path = f"trained_models/{model_name}"
 
@@ -75,12 +77,13 @@ def initial_train_test(data):
     # save_path = f"trained_models/lstm32/{model_name}"
 
     # model = train_initial_model(train_A2C, data, 300000, model_name, save_path)
-    # model = train_initial_model(train_PPO, data, 100000, model_name, save_path)
+    # model = train_initial_model(train_PPO, data, 500000, model_name, save_path)
+    model = train_initial_model(train_TD3, data, 300000, model_name, save_path)
 
     # model = train_initial_model(
     #     train_lstm_A2C, data, 300000, model_name, save_path)
-    model = train_initial_model(
-        train_lstm_PPO, data, 300000, model_name, save_path)
+    # model = train_initial_model(
+    #     train_lstm_PPO, data, 300000, model_name, save_path)
 
     # model = A2C.load(load_path=save_path)
     # model = PPO2.load(load_path=save_path)
