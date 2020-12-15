@@ -62,23 +62,26 @@ def evaluate_model(df, model, model_name):
 def initial_train_test(data):
     # model_name = "A2C_300k_dow_lstm64"
     # model_name = "A2C_300k_dow_lstm128"
-    # model_name = "A2C_300k_dow_mlp"
+    model_name = "A2C_300k_dow_mlp"
+    save_path = f"trained_models/{model_name}"
+    model = train_initial_model(train_A2C, data, 300000, model_name, save_path)
+    evaluate_model(data, model, model_name)
 
     # model_name = "PPO_300k_dow_lstm64"
     # model_name = "PPO_300k_dow_lstm128"
-    # model_name = "PPO_500k_dow_mlp"
+    model_name = "PPO_500k_dow_mlp"
+    save_path = f"trained_models/{model_name}"
+    model = train_initial_model(train_PPO, data, 500000, model_name, save_path)
+    evaluate_model(data, model, model_name)
 
     model_name = "TD3_300k_dow_mlp"
-
     save_path = f"trained_models/{model_name}"
+    model = train_initial_model(train_TD3, data, 300000, model_name, save_path)
+    evaluate_model(data, model, model_name)
 
     # load model
     # model_name = "PPO_100k_dow_1071"
     # save_path = f"trained_models/lstm32/{model_name}"
-
-    # model = train_initial_model(train_A2C, data, 300000, model_name, save_path)
-    # model = train_initial_model(train_PPO, data, 500000, model_name, save_path)
-    model = train_initial_model(train_TD3, data, 300000, model_name, save_path)
 
     # model = train_initial_model(
     #     train_lstm_A2C, data, 300000, model_name, save_path)
@@ -87,8 +90,6 @@ def initial_train_test(data):
 
     # model = A2C.load(load_path=save_path)
     # model = PPO2.load(load_path=save_path)
-
-    evaluate_model(data, model, model_name)
 
 
 def run():
