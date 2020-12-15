@@ -1,6 +1,7 @@
 # Custom config
 results/
 trained_models/
+tensorboard/
 
 # remove DS_Store
 **/.DS_Store
@@ -134,3 +135,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Tensorboard
+tensorboard/
+# VScode 
+.vscode/
