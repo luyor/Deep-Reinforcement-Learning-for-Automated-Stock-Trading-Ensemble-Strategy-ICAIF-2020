@@ -18,6 +18,8 @@ STOCK_DIM = 30
 # transaction fee: 1/1000 reasonable percentage
 TRANSACTION_FEE_PERCENT = 0.001
 REWARD_SCALING = 1e-4
+NAGETIVE_WEIGHTS = 0.82
+POSITIVE_WEIGHTS = 1.1
 
 
 class StockEnvTrain(gym.Env):
@@ -31,10 +33,10 @@ class StockEnvTrain(gym.Env):
         self.df = df
 
         # action_space normalization and shape is STOCK_DIM
-        self.action_space = spaces.Box(low=-1, high=1, shape=(STOCK_DIM,))
+        self.action_space = spaces.Box(low=-1, high=1, shape=(STOCK_DIM, ))
         # Shape = 181: [Current Balance]+[prices 1-30]+[owned shares 1-30]
         # +[macd 1-30]+ [rsi 1-30] + [cci 1-30] + [adx 1-30]
-        self.observation_space = spaces.Box(low=0, high=np.inf, shape=(181,))
+        self.observation_space = spaces.Box(low=0, high=np.inf, shape=(181, ))
         # load data from a pandas dataframe
         self.data = self.df.loc[self.day, :]
         self.terminal = False
@@ -58,14 +60,14 @@ class StockEnvTrain(gym.Env):
 
     def _sell_stock(self, index, action):
         # perform sell action based on the sign of the action
-        if self.state[index+STOCK_DIM+1] > 0:
+        if self.state[index + STOCK_DIM + 1] > 0:
             # update balance
             self.state[0] += \
                 self.state[index+1]*min(abs(action), self.state[index+STOCK_DIM+1]) * \
                 (1 - TRANSACTION_FEE_PERCENT)
 
-            self.state[index+STOCK_DIM +
-                       1] -= min(abs(action), self.state[index+STOCK_DIM+1])
+            self.state[index + STOCK_DIM + 1] -= min(
+                abs(action), self.state[index + STOCK_DIM + 1])
             self.cost += self.state[index+1]*min(abs(action), self.state[index+STOCK_DIM+1]) * \
                 TRANSACTION_FEE_PERCENT
             self.trades += 1
@@ -74,14 +76,14 @@ class StockEnvTrain(gym.Env):
 
     def _buy_stock(self, index, action):
         # perform buy action based on the sign of the action
-        available_amount = self.state[0] // self.state[index+1]
+        available_amount = self.state[0] // self.state[index + 1]
         # print('available_amount:{}'.format(available_amount))
 
         # update balance
         self.state[0] -= self.state[index+1]*min(available_amount, action) * \
             (1 + TRANSACTION_FEE_PERCENT)
 
-        self.state[index+STOCK_DIM+1] += min(available_amount, action)
+        self.state[index + STOCK_DIM + 1] += min(available_amount, action)
 
         self.cost += self.state[index+1]*min(available_amount, action) * \
             TRANSACTION_FEE_PERCENT
@@ -89,7 +91,7 @@ class StockEnvTrain(gym.Env):
 
     def step(self, actions):
         # print(self.day)
-        self.terminal = self.day >= len(self.df.index.unique())-1
+        self.terminal = self.day >= len(self.df.index.unique()) - 1
         # print(actions)
 
         if self.terminal:
@@ -135,8 +137,8 @@ class StockEnvTrain(gym.Env):
             argsort_actions = np.argsort(actions)
 
             sell_index = argsort_actions[:np.where(actions < 0)[0].shape[0]]
-            buy_index = argsort_actions[::-
-                                        1][:np.where(actions > 0)[0].shape[0]]
+            buy_index = argsort_actions[::-1][:np.where(
+                actions > 0)[0].shape[0]]
 
             for index in sell_index:
                 # print('take sell action'.format(actions[index]))
@@ -165,10 +167,13 @@ class StockEnvTrain(gym.Env):
             # print("end_total_asset:{}".format(end_total_asset))
 
             self.reward = end_total_asset - begin_total_asset
+            if (self.reward > 0):
+                self.reward *= POSITIVE_WEIGHTS
+
             # print("step_reward:{}".format(self.reward))
             self.rewards_memory.append(self.reward)
 
-            self.reward = self.reward*REWARD_SCALING
+            self.reward = self.reward * REWARD_SCALING
 
         return self.state, self.reward, self.terminal, {}
 
